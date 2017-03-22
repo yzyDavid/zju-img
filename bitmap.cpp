@@ -50,18 +50,25 @@ namespace wheel
         std::ofstream ofs(filename, std::ios::binary);
         if (!ofs.is_open())
             throw std::runtime_error("opening file failed");
+        ofs.write(reinterpret_cast<const char *>(&file_header), sizeof(file_header));
+        ofs.write(reinterpret_cast<const char *>(&info_header), sizeof(info_header));
     }
 
     std::shared_ptr<yuv_image> bitmap::to_yuv()
     {
-        auto res = std::make_shared<yuv_image>();
+        auto res = std::make_shared<yuv_image>(
+                static_cast<uint32_t>(info_header.height < 0 ? -info_header.height : info_header.height),
+                static_cast<uint32_t>(info_header.width)
+        );
 
         return res;
     }
 
-    std::shared_ptr<bitmap> bitmap::from_yuv(std::shared_ptr<yuv_image> *img)
+    std::shared_ptr<bitmap> bitmap::from_yuv(std::shared_ptr<yuv_image> img)
     {
         auto res = std::make_shared<bitmap>();
+        res->info_header.height = img->meta.height;
+        res->info_header.width = img->meta.width;
 
         return res;
     }

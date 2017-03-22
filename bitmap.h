@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <memory>
 #include <fstream>
+
 #include "yuv_image.h"
 
 namespace wheel
@@ -104,7 +105,7 @@ namespace wheel
     public:
         static std::shared_ptr<bitmap> from_file(char *filename);
 
-        static std::shared_ptr<bitmap> from_yuv(std::shared_ptr<yuv_image> *img);
+        static std::shared_ptr<bitmap> from_yuv(std::shared_ptr<yuv_image> img);
 
         void write_to_file(char *filename);
 
