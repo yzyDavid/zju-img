@@ -13,7 +13,7 @@ namespace wheel
 {
     std::shared_ptr<bitmap> bitmap::from_file(char *filename)
     {
-        std::ifstream ifs(filename, std::ios::in);
+        std::ifstream ifs(filename);
         if (!ifs.is_open())
             throw std::runtime_error("opening file failed");
 
@@ -27,7 +27,7 @@ namespace wheel
         bmp->file_size = (size_t) length;
 
         ifs.read(reinterpret_cast<char *>(&bmp->file_header), sizeof(bitmap::bitmap_file_header_type));
-        ifs.read(reinterpret_cast<char *>(&bmp->info_header), sizeof(bitmap::bitmap_file_header_type));
+        ifs.read(reinterpret_cast<char *>(&bmp->info_header), sizeof(bitmap::bitmap_info_header_type));
 
         if (!bmp->assert_headers())
             throw std::runtime_error("invalid bitmap file content");
@@ -62,15 +62,19 @@ namespace wheel
 
     void bitmap::write_to_file(const char *filename) const
     {
-        std::ofstream ofs(filename, std::ios::out);
+        std::ofstream ofs(filename);
         if (!ofs.is_open())
             throw std::runtime_error("opening file failed");
         ofs.write(reinterpret_cast<const char *>(&file_header), sizeof(file_header));
+        ofs.flush();
         ofs.write(reinterpret_cast<const char *>(&info_header), sizeof(info_header));
+        ofs.flush();
         ofs.write(reinterpret_cast<const char *>(rgbquads), sizeof(bitmap_rgbquad_type) * rgbquad_count());
+        ofs.flush();
         assert(sizeof(file_header) == 14);
         assert(sizeof(info_header) == 40);
         ofs.write(reinterpret_cast<const char *>(data), data_size());
+        ofs.flush();
 
 #ifdef WHEEL_DEBUG
         for (auto i = 0; i < 100; ++i)
@@ -121,7 +125,7 @@ namespace wheel
         os << "rgbquad count: " << rgbquad_count() << std::endl;
         os << "pixel size: " << pixel_size() << std::endl;
 
-        os << "========" << std::endl;
+        os << "=== rgb quads ===" << std::endl;
         for (auto i = 0; i < rgbquad_count(); ++i)
         {
             os << rgbquads[i] << std::endl;
