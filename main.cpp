@@ -4,8 +4,12 @@
  * 2017.3.16
  */
 
+#include <string>
+#include <iomanip>
 #include <iostream>
 #include <memory>
+#include <cassert>
+
 #include "bitmap.h"
 
 int main(int argc, char *argv[])
@@ -29,8 +33,14 @@ int main(int argc, char *argv[])
             return 1;
     }
 
+    std::cout.setf(std::ios::hex | std::ios::showbase);
+    std::cout << std::setbase(16);
+
     auto bmp = bitmap::from_file(filename);
-    ;
+    std::string new_name{std::string{filename} + ".new.bmp"};
+    //assert(bmp->rgbquad_count() == 0);
+    bmp->print_header(std::cout);
+    bmp->write_to_file(new_name.c_str());
 
     return 0;
 }
