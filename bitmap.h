@@ -71,6 +71,16 @@ namespace wheel
         static_assert(sizeof(bitmap_rgbquad_type) == 4);
         static_assert(std::is_pod<bitmap_rgbquad_type>::value);
 
+        struct rgb_pixel
+        {
+            uint8_t blue;
+            uint8_t green;
+            uint8_t red;
+        }__attribute((packed));
+
+        static_assert(sizeof(rgb_pixel) == 3);
+        static_assert(std::is_pod<rgb_pixel>::value);
+
     private:
         bitmap_file_header_type file_header;
         bitmap_info_header_type info_header;
@@ -93,16 +103,54 @@ namespace wheel
 
         bitmap(bitmap &&) = delete;
 
+        rgb_pixel &operator[](size_t index)
+        {
+            size_t row = index / line_size();
+            size_t column = index - row * info_header.width;
+            return position(row, column);
+        }
+
+        rgb_pixel &at(size_t index)
+        {
+            return (*this)[index];
+        }
+
+        const rgb_pixel &at_ro(size_t index) const
+        {
+            size_t row = index / line_size();
+            size_t column = index - row * info_header.width;
+            return position_ro(row, column);
+        }
+
+        rgb_pixel &position(size_t row, size_t column)
+        {
+            size_t offset = row * line_size() + column * pixel_size();
+            auto addr = reinterpret_cast<rgb_pixel *>(reinterpret_cast<uintptr_t>(data) + offset);
+            return *addr;
+        }
+
+        const rgb_pixel &position_ro(size_t row, size_t column) const
+        {
+            size_t offset = row * line_size() + column * pixel_size();
+            auto addr = reinterpret_cast<rgb_pixel *>(reinterpret_cast<uintptr_t>(data) + offset);
+            return *addr;
+        }
+
         size_t data_size() const
         {
-            return (info_header.bit_count ? info_header.bit_count : 24) / 8 * info_header.height * info_header.width;
-            //return file_size - sizeof(bitmap_file_header_type) - sizeof(bitmap_info_header_type)
-            //       - sizeof(bitmap_rgbquad_type) * rgbquad_count();
+            //return (info_header.bit_count ? info_header.bit_count : 24) / 8 * info_header.height * info_header.width;
+            auto size = file_size - sizeof(bitmap_file_header_type) - sizeof(bitmap_info_header_type)
+                        - sizeof(bitmap_rgbquad_type) * rgbquad_count();
+            assert(line_size() * info_header.height == size);
+            return size;
         }
 
         size_t pixel_size() const
         {
-            return data_size() / (info_header.height * info_header.width);
+            size_t s = static_cast<size_t>(info_header.bit_count / 8);
+            size_t calculated = data_size() / (info_header.height * info_header.width);
+            assert(s == calculated);
+            return s;
         }
 
         size_t rgbquad_count() const
@@ -119,6 +167,12 @@ namespace wheel
         {}
 
     private:
+        size_t line_size() const
+        {
+            auto capacity = info_header.bit_count / 8 * info_header.width;
+            return capacity % 4 == 0 ? capacity : (capacity + 4) - (capacity % 4);
+        }
+
         bool assert_headers()
         {
             if (info_header.bit_count != 24 && info_header.bit_count != 32)

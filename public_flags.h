@@ -5,6 +5,6 @@
 #ifndef HW1_PUBLIC_FLAGS_H
 #define HW1_PUBLIC_FLAGS_H
 
-#define WHEEL_DEBUG
+//#define WHEEL_DEBUG
 
 #endif //HW1_PUBLIC_FLAGS_H

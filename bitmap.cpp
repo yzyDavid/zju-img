@@ -95,9 +95,9 @@ namespace wheel
                 static_cast<uint32_t>(info_header.width)
         );
 
-        for (auto i = 0; i < res->meta.height * res->meta.width; ++i)
+        for (size_t i = 0; i < res->meta.height * res->meta.width; ++i)
         {
-            res->data[i].y;
+            auto p = at_ro(i);
         }
 
         return res;

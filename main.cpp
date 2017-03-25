@@ -40,6 +40,12 @@ int main(int argc, char *argv[])
     std::string new_name{std::string{filename} + ".new.bmp"};
     //assert(bmp->rgbquad_count() == 0);
     bmp->print_header(std::cout);
+    for (unsigned int i = 0; i < 100; ++i)
+    {
+        bmp->position(100, i).blue = 255;
+        bmp->position(101, i).green = 255;
+        bmp->position(102, i).red = 255;
+    }
     bmp->write_to_file(new_name.c_str());
 
     return 0;

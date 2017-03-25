@@ -23,9 +23,9 @@ namespace wheel
 
         struct yuv_pixel
         {
-            uint8_t y : 8;
-            uint8_t u : 8;
-            uint8_t v : 8;
+            uint8_t y;
+            uint8_t u;
+            uint8_t v;
         }__attribute__((aligned(4)));
 
         static_assert(sizeof(yuv_pixel) == 4);
