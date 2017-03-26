@@ -23,12 +23,12 @@ namespace wheel
 
         struct yuv_pixel
         {
-            uint8_t y;
-            uint8_t u;
-            uint8_t v;
-        }__attribute__((aligned(4)));
+            double y;
+            double u;
+            double v;
+        }__attribute__((aligned(8)));
 
-        static_assert(sizeof(yuv_pixel) == 4);
+        static_assert(sizeof(yuv_pixel) == 24);
 
         yuv_image() = delete;
 
@@ -45,6 +45,16 @@ namespace wheel
         ~yuv_image()
         {
             delete[] data;
+        }
+
+        yuv_pixel &operator[](size_t index)
+        {
+            return data[index];
+        }
+
+        yuv_pixel &at(size_t index)
+        {
+            return (*this)[index];
         }
 
         void for_each(std::function<void(yuv_pixel &)> op);

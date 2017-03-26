@@ -23,7 +23,7 @@ namespace wheel
         if (length < sizeof(bitmap_file_header_type) + sizeof(bitmap_info_header_type))
             throw std::runtime_error("invalid bitmap file length");
 
-        auto bmp = std::make_shared<bitmap>();
+        auto bmp = std::shared_ptr<bitmap>(new bitmap{});
         bmp->file_size = (size_t) length;
 
         ifs.read(reinterpret_cast<char *>(&bmp->file_header), sizeof(bitmap::bitmap_file_header_type));
@@ -98,17 +98,28 @@ namespace wheel
         for (size_t i = 0; i < res->meta.height * res->meta.width; ++i)
         {
             auto p = at_ro(i);
+            res->at(i).y = static_cast<double>(0.299 * p.red + 0.587 * p.green + 0.114 * p.blue);
+            res->at(i).u = static_cast<double>(0.492 * (p.blue - res->at(i).y));
+            res->at(i).v = static_cast<double>(0.877 * (p.red - res->at(i).y));
         }
 
         return res;
     }
 
-    std::shared_ptr<bitmap> bitmap::from_yuv(std::shared_ptr<yuv_image> img)
+    std::shared_ptr<bitmap> bitmap::from_yuv(std::shared_ptr<yuv_image> img, std::shared_ptr<bitmap> header_from)
     {
-        auto res = std::make_shared<bitmap>();
+        auto res = header_from->dump_header();
         res->info_header.height = img->meta.height;
         res->info_header.width = img->meta.width;
 
+        for (size_t i = 0; i < res->info_header.height * res->info_header.width; ++i)
+        {
+            auto &p = res->at(i);
+            auto f = img->at(i);
+            p.red = static_cast<uint8_t>(f.y + 1.14 * f.v);
+            p.green = static_cast<uint8_t>(f.y - 0.395 * f.u - 0.581 * f.v);
+            p.blue = static_cast<uint8_t>(f.y + 2.033 * f.u);
+        }
         return res;
     }
 

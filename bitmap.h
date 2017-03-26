@@ -13,6 +13,7 @@
 #include <iostream>
 #include <cassert>
 #include <type_traits>
+#include <cstring>
 
 #include "yuv_image.h"
 #include "public_flags.h"
@@ -103,16 +104,28 @@ namespace wheel
 
         bitmap(bitmap &&) = delete;
 
+        std::shared_ptr<bitmap> dump_header() const
+        {
+            auto res = std::shared_ptr<bitmap>(new bitmap{});
+            res->file_header = this->file_header;
+            res->info_header = this->info_header;
+            res->file_size = this->file_size;
+            res->data = new uint8_t[res->data_size()];
+            res->rgbquads = new bitmap_rgbquad_type[res->rgbquad_count()];
+            memcpy(res->rgbquads, this->rgbquads, sizeof(bitmap_rgbquad_type) * res->rgbquad_count());
+            return res;
+        }
+
         rgb_pixel &operator[](size_t index)
         {
-            size_t row = index / line_size();
-            size_t column = index - row * info_header.width;
-            return position(row, column);
+            return at(index);
         }
 
         rgb_pixel &at(size_t index)
         {
-            return (*this)[index];
+            size_t row = index / line_size();
+            size_t column = index - row * info_header.width;
+            return position(row, column);
         }
 
         const rgb_pixel &at_ro(size_t index) const
@@ -161,6 +174,7 @@ namespace wheel
                    / sizeof(bitmap_rgbquad_type);
         }
 
+    private:
         bitmap()
                 : data(nullptr),
                   rgbquads(nullptr)
@@ -185,7 +199,7 @@ namespace wheel
     public:
         static std::shared_ptr<bitmap> from_file(char *filename);
 
-        static std::shared_ptr<bitmap> from_yuv(std::shared_ptr<yuv_image> img);
+        static std::shared_ptr<bitmap> from_yuv(std::shared_ptr<yuv_image> img, std::shared_ptr<bitmap> header_from);
 
         void write_to_file(const char *filename) const;
 

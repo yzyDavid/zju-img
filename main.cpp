@@ -46,7 +46,9 @@ int main(int argc, char *argv[])
         bmp->position(101, i).green = 255;
         bmp->position(102, i).red = 255;
     }
-    bmp->write_to_file(new_name.c_str());
+    auto yuv = bmp->to_yuv();
+    auto back = bitmap::from_yuv(yuv, bmp);
+    back->write_to_file(new_name.c_str());
 
     return 0;
 }
