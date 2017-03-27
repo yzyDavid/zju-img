@@ -12,6 +12,14 @@ namespace wheel
 {
     class bitmap;
 
+    template<typename T = uint8_t>
+    inline __attribute__((always_inline)) T clamp(T v, T lb = 0, T ub = 255)
+    {
+        if (v < lb) return lb;
+        if (v > ub) return ub;
+        return v;
+    }
+
     class yuv_image final
     {
     public:

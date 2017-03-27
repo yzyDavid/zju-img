@@ -116,9 +116,9 @@ namespace wheel
         {
             auto &p = res->at(i);
             auto f = img->at(i);
-            p.red = static_cast<uint8_t>(f.y + 1.14 * f.v);
-            p.green = static_cast<uint8_t>(f.y - 0.395 * f.u - 0.581 * f.v);
-            p.blue = static_cast<uint8_t>(f.y + 2.033 * f.u);
+            p.red = static_cast<uint8_t>(clamp(f.y + 1.14 * f.v));
+            p.green = static_cast<uint8_t>(clamp(f.y - 0.395 * f.u - 0.581 * f.v));
+            p.blue = static_cast<uint8_t>(clamp(f.y + 2.033 * f.u));
         }
         return res;
     }
