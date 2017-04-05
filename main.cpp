@@ -13,6 +13,9 @@
 
 #include "bitmap.h"
 #include "yuv_image.h"
+#include "kernel.h"
+
+void hw2_entry(const char *filename);
 
 int main(int argc, char *argv[])
 {
@@ -38,31 +41,23 @@ int main(int argc, char *argv[])
     std::cout.setf(std::ios::hex | std::ios::showbase);
     std::cout << std::setbase(16);
 
-    auto bmp = bitmap::from_file(filename);
-    std::string new_name{std::string{filename} + "_gray.bmp"};
-    std::string new_name2{std::string{filename} + "_lightened.bmp"};
-    //assert(bmp->rgbquad_count() == 0);
-    bmp->print_header(std::cout);
-/*    for (unsigned int i = 0; i < 100; ++i)
-    {
-        bmp->position(100, i).blue = 255;
-        bmp->position(101, i).green = 255;
-        bmp->position(102, i).red = 255;
-    }*/
-    auto yuv = bmp->to_yuv();
-    auto yuv2 = bmp->to_yuv();
-    yuv->for_each([](yuv_image::yuv_pixel &p)
-                  {
-                      p.u = p.v = 0;
-                  });
-    yuv2->for_each([](yuv_image::yuv_pixel &p)
-                   {
-                       p.y *= 1.2;
-                   });
-    auto back = bitmap::from_yuv(yuv, bmp);
-    back->write_to_file(new_name.c_str());
-    back = bitmap::from_yuv(yuv2, bmp);
-    back->write_to_file(new_name2.c_str());
+    hw2_entry(filename);
 
     return 0;
+}
+
+void hw2_entry(const char *filename)
+{
+    using namespace std;
+    using namespace wheel;
+
+    auto bmp = bitmap::from_file(filename);
+
+    auto ker = kernel<bitmap::rgb_pixel, 3, 3>{};
+    ker.content[1][1] = bitmap::rgb_pixel{255, 255, 255};
+    ker.content[1][0] = bitmap::rgb_pixel{255, 255, 255};
+    ker.content[1][2] = bitmap::rgb_pixel{255, 255, 255};
+    ker.content[0][1] = bitmap::rgb_pixel{255, 255, 255};
+    ker.content[2][1] = bitmap::rgb_pixel{255, 255, 255};
+    ker.center = {1, 1};
 }

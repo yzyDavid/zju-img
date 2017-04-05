@@ -198,7 +198,7 @@ namespace wheel
         }
 
     public:
-        static std::shared_ptr<bitmap> from_file(char *filename);
+        static std::shared_ptr<bitmap> from_file(const char *filename);
 
         static std::shared_ptr<bitmap> from_yuv(std::shared_ptr<yuv_image> img, std::shared_ptr<bitmap> header_from);
 

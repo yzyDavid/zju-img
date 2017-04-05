@@ -11,7 +11,7 @@
 
 namespace wheel
 {
-    std::shared_ptr<bitmap> bitmap::from_file(char *filename)
+    std::shared_ptr<bitmap> bitmap::from_file(const char *filename)
     {
         std::ifstream ifs(filename);
         if (!ifs.is_open())
@@ -32,8 +32,8 @@ namespace wheel
         if (!bmp->assert_headers())
             throw std::runtime_error("invalid bitmap file content");
 
-/*        if (bmp->info_header.bit_count != 24)
-            throw std::runtime_error("NOT IMPLEMENTED");*/
+        if (bmp->info_header.bit_count != 24 && bmp->info_header.bit_count != 32)
+            throw std::runtime_error("NOT IMPLEMENTED");
 
         if (bmp->rgbquad_count())
         {
@@ -45,17 +45,10 @@ namespace wheel
         bmp->data = new uint8_t[bmp->data_size()];
         ifs.read(reinterpret_cast<char *>(bmp->data), bmp->data_size());
         ifs.close();
-        bmp->print_header(std::cout);
 
-        //reset offset bytes to ensure it can be write back to file correctly.
-        //comment these lines, for do not modify the file header, just write them back as what they like originally.
-/*        bmp->file_size -= bmp->rgbquad_count() * sizeof(bitmap_rgbquad_type);
-        bmp->file_header.offset_bytes = 54;
-        bmp->info_header.size = 40;
-        auto old_size = bmp->file_header.size;
-        bmp->file_header.size = static_cast<uint32_t>(54 + bmp->info_header.height * bmp->info_header.width *
-                                                           bmp->pixel_size());*/
-        //std::clog << old_size << " " << bmp->file_header.size;
+#ifdef WHEEL_DEBUG
+        bmp->print_header(std::cout);
+#endif
 
         return bmp;
     }
