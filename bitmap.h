@@ -14,10 +14,12 @@
 #include <cassert>
 #include <type_traits>
 #include <cstring>
+#include <utility>
 
 #include "yuv_image.h"
 #include "public_flags.h"
 #include "basic_image.h"
+#include "kernel.h"
 
 namespace wheel
 {
@@ -101,10 +103,105 @@ namespace wheel
             delete[] rgbquads;
         }
 
-        bitmap(const bitmap &) = delete;
+        bitmap(const bitmap &that)
+                : file_header(that.file_header),
+                  info_header(that.info_header),
+                  file_size(that.file_size),
+                  data(new uint8_t[that.data_size()]),
+                  rgbquads(new bitmap_rgbquad_type[that.rgbquad_count()])
+        {
+            memcpy(data, that.data, that.data_size());
+            memcpy(rgbquads, that.rgbquads, sizeof(bitmap_rgbquad_type) * that.rgbquad_count());
+        }
 
-        bitmap(bitmap &&) = delete;
+        bitmap(bitmap &&that) noexcept
+                : file_header(std::move(that.file_header)),
+                  info_header(std::move(that.info_header)),
+                  file_size(that.file_size),
+                  data(that.data),
+                  rgbquads(that.rgbquads)
+        {}
 
+    public:
+        std::shared_ptr<bitmap> binarize(uint8_t threshold, bool inverse = false) const;
+
+        template<typename TElement, uint8_t height, uint8_t width>
+        std::shared_ptr<bitmap> erode(const kernel<TElement, height, width> &ker) const
+        {
+            auto re = std::shared_ptr<bitmap>(new bitmap(*this));
+            auto img_height = re->info_header.height;
+            auto img_width = re->info_header.width;
+            auto c = ker.center;
+
+            for (int i = 0; i < img_height; ++i)
+            {
+                for (int j = 0; j < img_width; ++j)
+                {
+                    bool flag = true;
+                    for (int m = std::max(0, (int) (i - c.y)); m < std::min(img_height, (int) (i + height - c.y)); ++m)
+                    {
+                        for (int n = std::max(0, (int) (j - c.x));
+                             n < std::min(img_width, j + width - c.x); ++n)
+                        {
+                            if (ker.content[i - m][j - n].blue > 0 && position_ro(m, n).blue < 250)
+                            {
+                                flag = false;
+                            }
+                        }
+                    }
+                    re->position(i, j) = flag ? rgb_pixel{255, 255, 255} : rgb_pixel{0, 0, 0};
+                }
+            }
+
+            return re;
+        }
+
+        template<typename TElement, uint8_t height, uint8_t width>
+        std::shared_ptr<bitmap> dilate(const kernel<TElement, height, width> &ker) const
+        {
+            auto re = std::shared_ptr<bitmap>(new bitmap(*this));
+            auto img_height = re->info_header.height;
+            auto img_width = re->info_header.width;
+            auto c = ker.center;
+
+            for (int i = 0; i < img_height; ++i)
+            {
+                for (int j = 0; j < img_width; ++j)
+                {
+                    bool flag = false;
+                    for (int m = std::max(0, (int) (i - c.y)); m < std::min(img_height, (int) (i + height - c.y)); ++m)
+                    {
+                        for (int n = std::max(0, (int) (j - c.x));
+                             n < std::min(img_width, j + width - c.x); ++n)
+                        {
+                            if (ker.content[i - m][j - n].blue > 0 && position_ro(m, n).blue > 250)
+                            {
+                                flag = true;
+                            }
+                        }
+                    }
+                    re->position(i, j) = flag ? rgb_pixel{255, 255, 255} : rgb_pixel{0, 0, 0};
+                }
+            }
+
+            return re;
+        }
+
+        template<typename TElement, uint8_t height, uint8_t width>
+        std::shared_ptr<bitmap> opening(const kernel<TElement, height, width> &ker) const
+        {
+            auto r1 = erode(ker);
+            return r1->dilate(ker);
+        };
+
+        template<typename TElement, uint8_t height, uint8_t width>
+        std::shared_ptr<bitmap> closing(const kernel<TElement, height, width> &ker) const
+        {
+            auto r1 = dilate(ker);
+            return r1->erode(ker);
+        };
+
+    public:
         std::shared_ptr<bitmap> dump_header() const
         {
             auto res = std::shared_ptr<bitmap>(new bitmap{});

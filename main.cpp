@@ -60,4 +60,19 @@ void hw2_entry(const char *filename)
     ker.content[0][1] = bitmap::rgb_pixel{255, 255, 255};
     ker.content[2][1] = bitmap::rgb_pixel{255, 255, 255};
     ker.center = {1, 1};
+
+    auto bin = bmp->binarize(128);
+    bin->write_to_file((std::string(filename) + ".bin.bmp").data());
+
+    auto er = bin->erode(ker);
+    er->write_to_file((std::string(filename) + ".erode.bmp").data());
+
+    auto di = bin->dilate(ker);
+    di->write_to_file((std::string(filename) + ".dilate.bmp").data());
+
+    auto op = bin->opening(ker);
+    op->write_to_file((std::string(filename) + ".opening.bmp").data());
+
+    auto cl = bin->closing(ker);
+    cl->write_to_file((std::string(filename) + ".closing.bmp").data());
 }

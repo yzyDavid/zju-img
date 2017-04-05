@@ -163,4 +163,18 @@ namespace wheel
            << " reserved: " << (unsigned int) type.reserved;
         return os;
     }
+
+    std::shared_ptr<bitmap> bitmap::binarize(uint8_t threshold, bool inverse) const
+    {
+        auto re = std::shared_ptr<bitmap>(new bitmap(*this));
+
+        for (size_t i = 0; i < re->info_header.width * re->info_header.height; ++i)
+        {
+            re->at(i).red = re->at(i).green = re->at(i).blue = (uint8_t) (
+                    ((re->at_ro(i).red + re->at_ro(i).green + re->at_ro(i).blue) / 3 >= threshold) ^ inverse ?
+                    255 : 0);
+        }
+
+        return re;
+    }
 }
