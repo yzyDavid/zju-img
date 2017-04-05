@@ -17,12 +17,13 @@
 
 #include "yuv_image.h"
 #include "public_flags.h"
+#include "basic_image.h"
 
 namespace wheel
 {
     // only 24-bit or 32-bit bitmap should be supported.
     // also i do not wanna handle situations when headers are not well set.
-    class bitmap final
+    class bitmap final : public basic_image
     {
     public:
         struct bitmap_file_header_type

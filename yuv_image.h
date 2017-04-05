@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <functional>
+#include "basic_image.h"
 
 namespace wheel
 {
@@ -20,7 +21,7 @@ namespace wheel
         return v;
     }
 
-    class yuv_image final
+    class yuv_image final : public basic_image
     {
     public:
         struct yuv_meta //memory struct, not for a file type.
