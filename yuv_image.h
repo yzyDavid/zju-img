@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include "basic_image.h"
 
 namespace wheel
@@ -48,7 +49,8 @@ namespace wheel
             meta.width = width;
         }
 
-        yuv_image(const yuv_image &) = delete;
+        yuv_image(const yuv_image &that);
+
         yuv_image(yuv_image &&) = delete;
 
         ~yuv_image()
@@ -67,6 +69,10 @@ namespace wheel
         }
 
         void for_each(std::function<void(yuv_pixel &)> op);
+
+        std::shared_ptr<yuv_image> logarithmic() const;
+
+        std::shared_ptr<yuv_image> histogram_equalize(unsigned int levels) const;
 
     private:
         yuv_meta meta;

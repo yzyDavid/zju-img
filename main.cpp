@@ -17,6 +17,8 @@
 
 void hw2_entry(const char *filename);
 
+void hw3_entry(const char *filename);
+
 int main(int argc, char *argv[])
 {
     using namespace wheel;
@@ -41,7 +43,7 @@ int main(int argc, char *argv[])
     std::cout.setf(std::ios::hex | std::ios::showbase);
     std::cout << std::setbase(16);
 
-    hw2_entry(filename);
+    hw3_entry(filename);
 
     return 0;
 }
@@ -76,3 +78,22 @@ void hw2_entry(const char *filename)
     auto cl = bin->closing(ker);
     cl->write_to_file((std::string(filename) + ".closing.bmp").data());
 }
+
+void hw3_entry(const char *filename)
+{
+    using namespace std;
+    using namespace wheel;
+
+    auto bmp = bitmap::from_file(filename);
+
+    auto loged = bmp->to_yuv();
+    loged = loged->logarithmic();
+    auto loged_bmp = bitmap::from_yuv(loged, bmp);
+    loged_bmp->write_to_file((std::string(filename) + ".log.bmp").data());
+
+    auto histo = bmp->to_yuv();
+    histo = histo->histogram_equalize(8);
+    auto histo_bmp = bitmap::from_yuv(histo, bmp);
+    histo_bmp->write_to_file((std::string(filename) + ".histo.bmp").data());
+}
+
