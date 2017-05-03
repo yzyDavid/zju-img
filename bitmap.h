@@ -15,6 +15,7 @@
 #include <type_traits>
 #include <cstring>
 #include <utility>
+#include <functional>
 
 #include "yuv_image.h"
 #include "public_flags.h"
@@ -123,7 +124,83 @@ namespace wheel
         {}
 
     public:
+        void for_each(std::function<void(rgb_pixel& px)> op);
+
         std::shared_ptr<bitmap> binarize(uint8_t threshold, bool inverse = false) const;
+
+        template<typename TElement, uint8_t height, uint8_t width>
+        std::shared_ptr<bitmap> convolution2d(const kernel<TElement, height, width> &ker) const
+        {
+            auto re = std::shared_ptr<bitmap>(new bitmap(*this));
+            auto img_height = re->info_header.height;
+            auto img_width = re->info_header.width;
+            auto c = ker.center;
+
+            for (int i = 0; i < img_height; ++i)
+            {
+                for (int j = 0; j < img_width; ++j)
+                {
+                    uint8_t r = 0, g = 0, b = 0;
+                    for (int m = std::max(0, (int) (i - c.y));
+                         m < std::min(img_height, (int) (i + height - c.y)); ++m)
+                    {
+                        for (int n = std::max(0, (int) (j - c.x));
+                             n < std::min(img_width, j + width - c.x); ++n)
+                        {
+                            b += ker.content[i - m][j - n].blue * position_ro(m, n).blue;
+                            g += ker.content[i - m][j - n].green * position_ro(m, n).green;
+                            r += ker.content[i - m][j - n].red * position_ro(m, n).red;
+                        }
+                    }
+                    re->position(i, j) = rgb_pixel{b, g, r};
+                }
+            }
+
+            return re;
+        }
+
+        template<uint8_t kernel_order>
+        std::shared_ptr<bitmap> mean_filter() const
+        {
+            const int width = kernel_order, height = kernel_order;
+            auto ker = kernel<bitmap::rgb_pixel, width, height>{};
+            for (int i = 0; i < width; ++i)
+            {
+                for (int j = 0; j < height; ++j)
+                {
+                    ker.content[i][j] = rgb_pixel{255, 255, 255};
+                }
+            }
+            ker.center = {(uint32_t) (kernel_order / 2), (uint32_t) (kernel_order / 2)};
+
+            auto re = std::shared_ptr<bitmap>(new bitmap(*this));
+            auto img_height = re->info_header.height;
+            auto img_width = re->info_header.width;
+            auto c = ker.center;
+
+            for (int i = 0; i < img_height; ++i)
+            {
+                for (int j = 0; j < img_width; ++j)
+                {
+                    uint16_t r = 0, g = 0, b = 0;
+                    uint8_t times = 0;
+                    for (int m = std::max(0, (int) (i - c.y)); m < std::min(img_height, (int) (i + height - c.y)); ++m)
+                    {
+                        for (int n = std::max(0, (int) (j - c.x));
+                             n < std::min(img_width, j + width - c.x); ++n)
+                        {
+                            b += position_ro(m, n).blue;
+                            g += position_ro(m, n).green;
+                            r += position_ro(m, n).red;
+                            ++times;
+                        }
+                    }
+                    re->position(i, j) = rgb_pixel{(uint8_t) (b / times), (uint8_t) (g / times), (uint8_t) (r / times)};
+                }
+            }
+
+            return re;
+        }
 
         template<typename TElement, uint8_t height, uint8_t width>
         std::shared_ptr<bitmap> erode(const kernel<TElement, height, width> &ker) const
@@ -213,6 +290,20 @@ namespace wheel
             memcpy(res->rgbquads, this->rgbquads, sizeof(bitmap_rgbquad_type) * res->rgbquad_count());
             return res;
         }
+
+        std::shared_ptr<bitmap> resize_and_empty(uint32_t width, int32_t height) const;
+
+        std::shared_ptr<bitmap> resize(uint32_t width, int32_t height) const;
+
+        std::shared_ptr<bitmap> translate(uint32_t x, uint32_t y) const;
+
+        std::shared_ptr<bitmap> mirror(bool is_around_x = true) const;
+
+        std::shared_ptr<bitmap> rotate(double rad) const;
+
+        std::shared_ptr<bitmap> scale(double rate) const;
+
+        std::shared_ptr<bitmap> shear(double d, bool is_shear_on_x = true) const;
 
         rgb_pixel &operator[](size_t index)
         {

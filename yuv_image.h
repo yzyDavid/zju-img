@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+
 #include "basic_image.h"
 
 namespace wheel

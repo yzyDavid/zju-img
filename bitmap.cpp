@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include <fstream>
 #include <cassert>
+#include <cmath>
+#include <functional>
 
 #include "bitmap.h"
 #include "public_flags.h"
@@ -176,5 +178,197 @@ namespace wheel
         }
 
         return re;
+    }
+
+    std::shared_ptr<bitmap> bitmap::resize_and_empty(uint32_t width, int32_t height) const
+    {
+        auto res = std::shared_ptr<bitmap>(new bitmap());
+        res->info_header = this->info_header;
+        res->file_header = this->file_header;
+
+        res->info_header.height = height;
+        res->info_header.width = width;
+
+        res->file_size = sizeof(bitmap_file_header_type) + sizeof(bitmap_info_header_type)
+                         + sizeof(bitmap_rgbquad_type) * res->rgbquad_count() +
+                         res->line_size() * res->info_header.height;
+
+        res->data = new uint8_t[res->data_size()];
+        res->rgbquads = new bitmap_rgbquad_type[res->rgbquad_count()];
+
+        memcpy(res->rgbquads, rgbquads, sizeof(bitmap_rgbquad_type) * res->rgbquad_count());
+        memset(res->data, 0, res->data_size());
+
+        return res;
+    }
+
+    std::shared_ptr<bitmap> bitmap::resize(uint32_t width, int32_t height) const
+    {
+        auto res = this->resize_and_empty(width, height);
+        auto t_height = this->info_header.height < 0 ? -this->info_header.height : this->info_header.height;
+
+        for (int i = 0; i < this->info_header.width; ++i)
+        {
+            for (int j = 0; j < t_height; ++j)
+            {
+                res->position(j, i) = this->position_ro(j, i);
+            }
+        }
+        return res;
+    }
+
+    std::shared_ptr<bitmap> bitmap::translate(uint32_t x, uint32_t y) const
+    {
+        auto res = this->resize_and_empty(info_header.width + x, info_header.height + y);
+
+        auto t_height = this->info_header.height < 0 ? -this->info_header.height : this->info_header.height;
+
+        for (int i = 0; i < this->info_header.width; ++i)
+        {
+            for (int j = 0; j < t_height; ++j)
+            {
+                res->position(j + y, i + x) = this->position_ro(j, i);
+            }
+        }
+
+        return res;
+    }
+
+    std::shared_ptr<bitmap> bitmap::mirror(bool is_around_x) const
+    {
+        auto res = std::shared_ptr<bitmap>();
+        auto t_height = this->info_header.height < 0 ? -this->info_header.height : this->info_header.height;
+
+        if (is_around_x)
+        {
+            res = this->resize_and_empty(this->info_header.width, this->info_header.height * 2);
+            for (int i = 0; i < this->info_header.width; ++i)
+            {
+                for (int j = 0; j < t_height; ++j)
+                {
+                    res->position(2 * t_height - j - 1, i) = this->position_ro(j, i);
+                }
+            }
+        } else
+        {
+            res = this->resize_and_empty(this->info_header.width * 2, this->info_header.height);
+            for (int i = 0; i < this->info_header.width; ++i)
+            {
+                for (int j = 0; j < t_height; ++j)
+                {
+                    res->position(j, 2 * this->info_header.width - i - 1) = this->position_ro(j, i);
+                }
+            }
+        }
+
+        return res;
+    }
+
+    /*
+     * x0 = xcos + ysin
+     * y0 = ycos - xsin
+     */
+    std::shared_ptr<bitmap> bitmap::rotate(double rad) const
+    {
+        double s = sin(rad);
+        double c = cos(rad);
+
+        auto h = this->info_header.height;
+        auto w = this->info_header.width;
+
+        size_t nh, nw;
+
+        auto res = this->resize_and_empty((nw = info_header.width * (1 + sin(rad)) + 1),
+                                          (nh = info_header.height * (1 + sin(rad)) + 1));
+
+        auto t_height = this->info_header.height < 0 ? -this->info_header.height : this->info_header.height;
+
+        for (int i = 0; i < w; ++i)
+        {
+            for (int j = 0; j < h; ++j)
+            {
+                int32_t y = round(j * cos(rad) + i * sin(rad));
+                int32_t x = round(i * cos(rad) - j * sin(rad));
+                if (x < 0 || x >= w - 1)x = INT32_MIN;
+                if (y < 0 || y >= h - 1)y = INT32_MIN;
+                if (x != INT32_MIN && y != INT32_MIN)
+                {
+                    res->position(j + s * h, i + s * w) = this->position_ro(x - s, y - s);
+                } else
+                {
+                    res->position(j + s * h, i + s * w) = {0, 0, 0};
+                }
+            }
+        }
+
+        return res;
+    }
+
+    std::shared_ptr<bitmap> bitmap::scale(double rate) const
+    {
+        auto h = this->info_header.height;
+        auto w = this->info_header.width;
+        auto res = this->resize_and_empty(w * rate, h * rate);
+
+        auto t_height = this->info_header.height < 0 ? -this->info_header.height : this->info_header.height;
+
+        for (int i = 0; i < w * rate; ++i)
+        {
+            for (int j = 0; j < h * rate; ++j)
+            {
+                res->position(j, i) = this->position_ro(round(j / rate), round(i / rate));
+            }
+        }
+
+        return res;
+    }
+
+    std::shared_ptr<bitmap> bitmap::shear(double d, bool is_shear_on_x) const
+    {
+        auto h = this->info_header.height;
+        auto w = this->info_header.width;
+        auto t_height = this->info_header.height < 0 ? -this->info_header.height : this->info_header.height;
+
+        auto res = std::shared_ptr<bitmap>();
+
+        if (is_shear_on_x)
+        {
+            res = this->resize_and_empty(w + d * h, h);
+
+            for (int i = 0; i < w + d * h; ++i)
+            {
+                for (int j = 0; j < h; ++j)
+                {
+                    if (i - (1 + d) * j <= 0 || i - (1 + d) * j > w)
+                        res->position(j, i) = {0, 0, 0};
+                    else
+                        res->position(j, i) = this->position_ro(round(j), round(i - (1 + d) * j));
+                }
+            }
+        } else
+        {
+            res = this->resize_and_empty(w, h + d * w);
+
+            for (int i = 0; i < w; ++i)
+            {
+                for (int j = 0; j < h + d * w; ++j)
+                {
+                    if (j - (1 + d) * i <= 0 || j - (1 + d) * i > h)
+                        res->position(j, i) = {0, 0, 0};
+                    else
+                        res->position(j, i) = this->position_ro(round(j - (1 + d) * i), round(i));
+                }
+            }
+        }
+
+        return res;
+    }
+
+    void bitmap::for_each(std::function<void(bitmap::rgb_pixel &)> op)
+    {
+        for (size_t i = 0; i < info_header.width * info_header.height; ++i)
+        {
+            op(at(i));
+        }
     }
 }
