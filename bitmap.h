@@ -128,6 +128,8 @@ namespace wheel
 
         std::shared_ptr<bitmap> binarize(uint8_t threshold, bool inverse = false) const;
 
+        std::shared_ptr<bitmap> bilaterial_filter(double sigma_d, double sigma_r) const;
+
         template<typename TElement, uint8_t height, uint8_t width>
         std::shared_ptr<bitmap> convolution2d(const kernel<TElement, height, width> &ker) const
         {

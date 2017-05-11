@@ -24,6 +24,8 @@ void hw4_entry(const char *filename);
 
 void hw5_entry(const char *filename);
 
+void hw6_entry(const char *filename);
+
 int main(int argc, char *argv[])
 {
     using namespace wheel;
@@ -48,7 +50,7 @@ int main(int argc, char *argv[])
     std::cout.setf(std::ios::hex | std::ios::showbase);
     std::cout << std::setbase(16);
 
-    hw5_entry(filename);
+    hw6_entry(filename);
 
     return 0;
 }
@@ -154,3 +156,14 @@ void hw5_entry(const char *filename)
                       });
     laplace->write_to_file("/home/yzy/img/lena.laplace.bmp");
 }
+
+void hw6_entry(const char *filename)
+{
+    using namespace std;
+    using namespace wheel;
+
+    auto bmp = bitmap::from_file(filename);
+    auto bilaterial = bmp->bilaterial_filter(1, 1);
+    bilaterial->write_to_file((std::string(filename) + ".bilaterial.bmp").data());
+}
+

@@ -371,4 +371,55 @@ namespace wheel
             op(at(i));
         }
     }
+
+    std::shared_ptr<bitmap> bitmap::bilaterial_filter(double sigma_d, double sigma_r) const
+    {
+        auto re = std::shared_ptr<bitmap>(new bitmap(*this));
+        const unsigned int height = 11, width = 11;
+        kernel<float64_pixel, height, width> ker;
+        ker.center = {5, 5};
+        auto img_height = re->info_header.height;
+        auto img_width = re->info_header.width;
+        auto c = ker.center;
+
+        for (int i = 0; i < img_height; ++i)
+        {
+            for (int j = 0; j < img_width; ++j)
+            {
+                double r = 0, g = 0, b = 0;
+                double sw_r = 0, sw_g = 0, sw_b = 0;
+
+                for (int m = std::max(0, (int) (i - c.y));
+                     m < std::min(img_height, (int) (i + height - c.y)); ++m)
+                {
+                    for (int n = std::max(0, (int) (j - c.x));
+                         n < std::min(img_width, j + width - c.x); ++n)
+                    {
+                        double w1 = ((i - m) * (i - m) + (j - n) * (j - n)) / (2 * sigma_d * sigma_d);
+                        double w2_b =
+                                (std::abs(position_ro(i, j).blue - position_ro(m, n).blue)) / (2 * sigma_r * sigma_r);
+                        double w2_g =
+                                (std::abs(position_ro(i, j).green - position_ro(m, n).green)) / (2 * sigma_r * sigma_r);
+                        double w2_r =
+                                (std::abs(position_ro(i, j).red - position_ro(m, n).red)) / (2 * sigma_r * sigma_r);
+                        double e_b = std::exp(-w1 - w2_b);
+                        double e_g = std::exp(-w1 - w2_g);
+                        double e_r = std::exp(-w1 - w2_r);
+                        r += position_ro(m, n).red * e_r;
+                        g += position_ro(m, n).green * e_g;
+                        b += position_ro(m, n).blue * e_b;
+                        sw_r += e_r;
+                        sw_g += e_g;
+                        sw_b += e_b;
+                    }
+                }
+                b /= sw_b;
+                g /= sw_g;
+                r /= sw_r;
+                re->position(i, j) = rgb_pixel{b, g, r};
+            }
+        }
+
+        return re;
+    }
 }
