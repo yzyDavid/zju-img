@@ -163,7 +163,7 @@ void hw6_entry(const char *filename)
     using namespace wheel;
 
     auto bmp = bitmap::from_file(filename);
-    auto bilaterial = bmp->bilaterial_filter(1, 1);
+    auto bilaterial = bmp->bilaterial_filter<3>(4, 0.04);
     bilaterial->write_to_file((std::string(filename) + ".bilaterial.bmp").data());
 }
 
